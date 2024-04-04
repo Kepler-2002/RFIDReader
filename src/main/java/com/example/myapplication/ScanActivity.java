@@ -592,21 +592,23 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
     Log.d("Callback", "GPIControlMSg called with GPI Status: " + gpi_model.StartOrStop);
 
     if(gpi_model.StartOrStop == 1){ // 触发停止
-      int max = 0;
-      String SentData = "";
+      int length = 0;
+      StringBuilder SentData = new StringBuilder();
       for (String item:EpcDataList) {
-        if (EpcDataMap.get(item) != null && EpcDataMap.get(item) > max){
-          max = EpcDataMap.get(item);
-          SentData = item;
+        if (EpcDataMap.get(item) != null){
+          SentData.append(item).append(',');
+          length ++;
         }
       }
 
-      if(max != 0){
+      if(length != 0){
+        SentData.deleteCharAt(SentData.length() - 1);
         // 发送数据到目标地址和端口号
-        tcpClient.sendData(SentData);
-        TurnLightOnAndOff();
-
+        tcpClient.sendData(SentData.toString());
+      }else {
+        tcpClient.sendData("noread");
       }
+      TurnLightOnAndOff();
       //重新开始计数
       EpcDataMap = new HashMap<>();
       EpcDataList = new ArrayList<>();
