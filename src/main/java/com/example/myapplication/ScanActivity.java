@@ -30,6 +30,8 @@ import util.TCPClient;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.Date;
+import java.text.SimpleDateFormat;
 
 public class ScanActivity extends AppCompatActivity implements IAsynchronousMessage{
   private TCPClient tcpClient;
@@ -600,13 +602,15 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
           SentData = item;
         }
       }
-
+      Date now = new Date();
+      SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss.SSS");
+      String currentTime = formatter.format(now);
       if(max != 0){
         // 发送数据到目标地址和端口号
-        tcpClient.sendData(SentData);
+        tcpClient.sendData(SentData + " " + currentTime);
         TurnLightOnAndOff();
       }else {
-        tcpClient.sendData("noread");
+        tcpClient.sendData("noread " + currentTime);
       }
       //重新开始计数
       EpcDataMap = new HashMap<>();
