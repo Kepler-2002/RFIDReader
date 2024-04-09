@@ -30,6 +30,8 @@ import util.TCPClient;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.Date;
+import java.text.SimpleDateFormat;
 
 public class ScanActivity extends AppCompatActivity implements IAsynchronousMessage{
   private TCPClient tcpClient;
@@ -70,8 +72,31 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
 
   private boolean conn;
 
+  private boolean isReconnectRunning = false;
+
   // 不同的选择框选项数据
   private String [] powerOptions = new String[30];
+
+  // 声明一个Handler用于定时任务
+  private Handler handler = new Handler();
+  private Runnable reconnectRunnable = new Runnable() {
+    @Override
+    public void run() {
+      if (!isReconnectRunning) {
+          isReconnectRunning = true;
+      }
+
+      // 检查连接状态
+      if (!tcpClient.isConnected()) {
+        // 连接断开，进行重新连接
+        reconnectToTCPClient();
+      }
+
+      // 重新调度任务
+      handler.postDelayed(this, 5000);
+    }
+  };
+
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -88,10 +113,6 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
     defaultIpAddress = sharedPref.getString("ipAddress", "192.168.1.106");
     defaultPort = sharedPref.getInt("port", 7899);
 
-
-
-
-
     // 初始化视图组件
     spinnerPower= findViewById(R.id.spinnerPower);
     textViewReadCount = findViewById(R.id.textViewReadCount);
@@ -102,18 +123,13 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
     buttonConnect = findViewById(R.id.buttonConnect);
     text1 = findViewById(R.id.text1);
 
-
     ImageView imageViewLogo = findViewById(R.id.imageViewLogo);
     imageViewLogo.setImageResource(R.drawable.logo); // 设置logo图片资源
-
 
     // 显示进度条
     progressBarConnecting.setVisibility(View.VISIBLE);
     textConnectingStatus.setVisibility(View.VISIBLE);
     textConnectingStatus.setText("正在连接读写器");
-
-
-
 
     spinnerPower.setVisibility(View.INVISIBLE);
     textViewReadCount.setVisibility(View.INVISIBLE);
@@ -141,6 +157,10 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
           int port = Integer.parseInt(parts[1]);
 
           connectToTCPClient(ipAddress,port);
+
+          if (tcpClient.isConnected() && !isReconnectRunning) {
+            handler.postDelayed(reconnectRunnable, 5000);
+          }
 
           // 将获取的IP地址和端口号设置为默认值
           defaultIpAddress = ipAddress;
@@ -176,6 +196,20 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
     });
   }
 
+  // 在连接断开时进行重新连接
+  public void reconnectToTCPClient() {
+    runOnUiThread(new Runnable() {
+      @Override
+      public void run() {
+        showToast("TCP连接断开，正在重新连接...");
+      }
+    });
+
+    // 进行重新连接操作
+    connectToTCPClient(defaultIpAddress, defaultPort);
+  }
+
+
   private void connectToTCPClient(String targetIpAddress, int targetPort) {
     new Thread(new Runnable() {
       @Override
@@ -201,7 +235,7 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
             public void run() {
               Log.d("TCP Error", e.toString());
               AlertDialog.Builder builder = new AlertDialog.Builder(ScanActivity.this);
-              builder.setMessage("服务器TCP连接失败，请手动重新连接")
+              builder.setMessage("服务器TCP连接失败，请检查网络连接")
                       .setPositiveButton("确定", new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int id) {
 
@@ -397,8 +431,13 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
       // 初始化选择框
       initSpinners(defaultPowerLevel);
       connectToTCPClient(defaultIpAddress, defaultPort);
+
+      if(tcpClient.isConnected() && !isReconnectRunning) {
+        // 开始定时重连检测任务
+        handler.postDelayed(reconnectRunnable, 5000);
+      }
     }
-    // 连接成功，继续初始化界面的代码
+    // 继续初始化界面的代码
     runOnUiThread(new Runnable() {
       @Override
       public void run() {
@@ -557,9 +596,6 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
 
   private ArrayList<String> EpcDataList =  new ArrayList<>();
 
-
-
-
   @Override
   public void OutPutTags(Tag_Model tag_model) {
     // 获取标签的EPC数据
@@ -591,30 +627,33 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
 //            RFIDReader._Config.GetReaderGPIParam(connID, eGPI._1));
     Log.d("Callback", "GPIControlMSg called with GPI Status: " + gpi_model.StartOrStop);
 
-    if(gpi_model.StartOrStop == 1){ // 触发停止
+    if (gpi_model.StartOrStop == 1) { // 触发停止
       int length = 0;
       StringBuilder SentData = new StringBuilder();
-      for (String item:EpcDataList) {
-        if (EpcDataMap.get(item) != null){
+      for (String item : EpcDataList) {
+        if (EpcDataMap.get(item) != null) {
           SentData.append(item).append(',');
-          length ++;
+          length++;
         }
       }
 
-      if(length != 0){
+      Date now = new Date();
+      SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss.SSS");
+      String currentTime = formatter.format(now);
+
+      if (length != 0) {
         SentData.deleteCharAt(SentData.length() - 1);
         // 发送数据到目标地址和端口号
-        tcpClient.sendData(SentData.toString());
-      }else {
-        tcpClient.sendData("noread");
+        tcpClient.sendData(SentData + " " + currentTime);
+      } else {
+        tcpClient.sendData("noread" + " " + currentTime);
+        TurnLightOnAndOff();
+        //重新开始计数
+        EpcDataMap = new HashMap<>();
+        EpcDataList = new ArrayList<>();
       }
-      TurnLightOnAndOff();
-      //重新开始计数
-      EpcDataMap = new HashMap<>();
-      EpcDataList = new ArrayList<>();
     }
   }
-
   @Override
   public void OutPutScanData(String s, byte[] bytes) {
   }

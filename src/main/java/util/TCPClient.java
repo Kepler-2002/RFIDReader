@@ -19,6 +19,10 @@ public class TCPClient {
     out.println(data);
   }
 
+  public boolean isConnected() {
+    return socket != null && socket.isConnected();
+  }
+
   public void disconnect() throws IOException {
     if (socket != null && !socket.isClosed()) {
       out.close();
