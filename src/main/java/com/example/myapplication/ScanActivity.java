@@ -72,6 +72,8 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
 
   private boolean conn;
 
+  private boolean isReconnectRunning = false;
+
   // 不同的选择框选项数据
   private String [] powerOptions = new String[30];
 
@@ -80,6 +82,10 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
   private Runnable reconnectRunnable = new Runnable() {
     @Override
     public void run() {
+      if (!isReconnectRunning) {
+          isReconnectRunning = true;
+      }
+
       // 检查连接状态
       if (!tcpClient.isConnected()) {
         // 连接断开，进行重新连接
@@ -151,6 +157,10 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
           int port = Integer.parseInt(parts[1]);
 
           connectToTCPClient(ipAddress,port);
+
+          if (tcpClient.isConnected() && !isReconnectRunning) {
+            handler.postDelayed(reconnectRunnable, 5000);
+          }
 
           // 将获取的IP地址和端口号设置为默认值
           defaultIpAddress = ipAddress;
@@ -411,9 +421,6 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
   }
 
   public void initUI() {
-    // 开始定时重连检测任务
-    handler.postDelayed(reconnectRunnable, 5000);
-
     if (conn){
       // 从SharedPreferences中读取默认IP地址和端口号
       SharedPreferences sharedPref = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
@@ -424,8 +431,13 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
       // 初始化选择框
       initSpinners(defaultPowerLevel);
       connectToTCPClient(defaultIpAddress, defaultPort);
+
+      if(tcpClient.isConnected() && !isReconnectRunning) {
+        // 开始定时重连检测任务
+        handler.postDelayed(reconnectRunnable, 5000);
+      }
     }
-    // 连接成功，继续初始化界面的代码
+    // 继续初始化界面的代码
     runOnUiThread(new Runnable() {
       @Override
       public void run() {
