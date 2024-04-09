@@ -75,6 +75,23 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
   // 不同的选择框选项数据
   private String [] powerOptions = new String[30];
 
+  // 声明一个Handler用于定时任务
+  private Handler handler = new Handler();
+  private Runnable reconnectRunnable = new Runnable() {
+    @Override
+    public void run() {
+      // 检查连接状态
+      if (!tcpClient.isConnected()) {
+        // 连接断开，进行重新连接
+        reconnectToTCPClient();
+      }
+
+      // 重新调度任务
+      handler.postDelayed(this, 5000);
+    }
+  };
+
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -90,10 +107,6 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
     defaultIpAddress = sharedPref.getString("ipAddress", "192.168.1.106");
     defaultPort = sharedPref.getInt("port", 7899);
 
-
-
-
-
     // 初始化视图组件
     spinnerPower= findViewById(R.id.spinnerPower);
     textViewReadCount = findViewById(R.id.textViewReadCount);
@@ -104,18 +117,13 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
     buttonConnect = findViewById(R.id.buttonConnect);
     text1 = findViewById(R.id.text1);
 
-
     ImageView imageViewLogo = findViewById(R.id.imageViewLogo);
     imageViewLogo.setImageResource(R.drawable.logo); // 设置logo图片资源
-
 
     // 显示进度条
     progressBarConnecting.setVisibility(View.VISIBLE);
     textConnectingStatus.setVisibility(View.VISIBLE);
     textConnectingStatus.setText("正在连接读写器");
-
-
-
 
     spinnerPower.setVisibility(View.INVISIBLE);
     textViewReadCount.setVisibility(View.INVISIBLE);
@@ -178,6 +186,20 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
     });
   }
 
+  // 在连接断开时进行重新连接
+  public void reconnectToTCPClient() {
+    runOnUiThread(new Runnable() {
+      @Override
+      public void run() {
+        showToast("TCP连接断开，正在重新连接...");
+      }
+    });
+
+    // 进行重新连接操作
+    connectToTCPClient(defaultIpAddress, defaultPort);
+  }
+
+
   private void connectToTCPClient(String targetIpAddress, int targetPort) {
     new Thread(new Runnable() {
       @Override
@@ -203,7 +225,7 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
             public void run() {
               Log.d("TCP Error", e.toString());
               AlertDialog.Builder builder = new AlertDialog.Builder(ScanActivity.this);
-              builder.setMessage("服务器TCP连接失败，请手动重新连接")
+              builder.setMessage("服务器TCP连接失败，请检查网络连接")
                       .setPositiveButton("确定", new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int id) {
 
@@ -389,6 +411,9 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
   }
 
   public void initUI() {
+    // 开始定时重连检测任务
+    handler.postDelayed(reconnectRunnable, 5000);
+
     if (conn){
       // 从SharedPreferences中读取默认IP地址和端口号
       SharedPreferences sharedPref = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
