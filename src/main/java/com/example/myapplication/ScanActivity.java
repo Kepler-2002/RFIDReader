@@ -605,7 +605,8 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
         // 发送数据到目标地址和端口号
         tcpClient.sendData(SentData);
         TurnLightOnAndOff();
-
+      }else {
+        tcpClient.sendData("noread");
       }
       //重新开始计数
       EpcDataMap = new HashMap<>();
