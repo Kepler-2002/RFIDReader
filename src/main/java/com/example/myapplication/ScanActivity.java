@@ -170,7 +170,7 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
           defaultIpAddress = ipAddress;
           defaultPort = port;
 
-          editTextIpAddress.setHint(defaultIpAddress + ":" + defaultPort);
+          editTextIpAddress.setText(defaultIpAddress + ":" + defaultPort);
 
 
           // 保存新的默认IP地址和端口号到SharedPreferences
