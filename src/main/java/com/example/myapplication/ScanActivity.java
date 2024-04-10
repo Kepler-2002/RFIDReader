@@ -72,30 +72,30 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
 
   private boolean conn;
 
-  private boolean isReconnectRunning = false;
+//  private boolean isReconnectRunning = false;
 
   // 不同的选择框选项数据
   private String [] powerOptions = new String[30];
 
-  // 声明一个Handler用于定时任务
-  private Handler handler = new Handler();
-  private Runnable reconnectRunnable = new Runnable() {
-    @Override
-    public void run() {
-      if (!isReconnectRunning) {
-          isReconnectRunning = true;
-      }
-
-      // 检查连接状态
-      if (!tcpClient.isConnected()) {
-        // 连接断开，进行重新连接
-        reconnectToTCPClient();
-      }
-
-      // 重新调度任务
-      handler.postDelayed(this, 5000);
-    }
-  };
+//  // 声明一个Handler用于定时任务
+//  private Handler handler = new Handler();
+//  private Runnable reconnectRunnable = new Runnable() {
+//    @Override
+//    public void run() {
+//      if (!isReconnectRunning) {
+//          isReconnectRunning = true;
+//      }
+//
+//      // 检查连接状态
+//      if (!tcpClient.isConnected()) {
+//        // 连接断开，进行重新连接
+//        reconnectToTCPClient();
+//      }
+//
+//      // 重新调度任务
+//      handler.postDelayed(this, 5000);
+//    }
+//  };
 
 
   @Override
@@ -158,9 +158,9 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
 
           connectToTCPClient(ipAddress,port);
 
-          if (tcpClient.isConnected() && !isReconnectRunning) {
-            handler.postDelayed(reconnectRunnable, 5000);
-          }
+//          if (tcpClient.isConnected() && !isReconnectRunning) {
+//            handler.postDelayed(reconnectRunnable, 5000);
+//          }
 
           // 将获取的IP地址和端口号设置为默认值
           defaultIpAddress = ipAddress;
@@ -432,10 +432,10 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
       initSpinners(defaultPowerLevel);
       connectToTCPClient(defaultIpAddress, defaultPort);
 
-      if(tcpClient.isConnected() && !isReconnectRunning) {
-        // 开始定时重连检测任务
-        handler.postDelayed(reconnectRunnable, 5000);
-      }
+//      if(tcpClient.isConnected() && !isReconnectRunning) {
+//        // 开始定时重连检测任务
+//        handler.postDelayed(reconnectRunnable, 5000);
+//      }
     }
     // 继续初始化界面的代码
     runOnUiThread(new Runnable() {
