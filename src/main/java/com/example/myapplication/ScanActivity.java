@@ -121,7 +121,7 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
     buttonRefresh = findViewById(R.id.buttonRefresh);
     tableLayout = findViewById(R.id.tableLayout);
     editTextIpAddress = findViewById(R.id.editTextIpAddress);
-    editTextIpAddress.setHint(defaultIpAddress + ":" + defaultPort);
+    editTextIpAddress.setText(defaultIpAddress + ":" + defaultPort);
     buttonConnect = findViewById(R.id.buttonConnect);
     text1 = findViewById(R.id.text1);
 
