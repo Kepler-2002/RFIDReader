@@ -34,7 +34,7 @@ import java.util.Date;
 import java.text.SimpleDateFormat;
 
 public class ScanActivity extends AppCompatActivity implements IAsynchronousMessage{
-  private TCPClient tcpClient;
+  private TCPClient tcpClient = new TCPClient();
   private String defaultIpAddress = "192.168.1.106";
   private int defaultPort = 7899; // 默认端口号
 
@@ -72,30 +72,31 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
 
   private boolean conn;
 
-//  private boolean isReconnectRunning = false;
+  private boolean isReconnectRunning = false;
 
   // 不同的选择框选项数据
   private String [] powerOptions = new String[30];
 
-//  // 声明一个Handler用于定时任务
-//  private Handler handler = new Handler();
-//  private Runnable reconnectRunnable = new Runnable() {
-//    @Override
-//    public void run() {
-//      if (!isReconnectRunning) {
-//          isReconnectRunning = true;
-//      }
-//
-//      // 检查连接状态
-//      if (!tcpClient.isConnected()) {
-//        // 连接断开，进行重新连接
-//        reconnectToTCPClient();
-//      }
-//
-//      // 重新调度任务
-//      handler.postDelayed(this, 5000);
-//    }
-//  };
+  // 声明一个Handler用于定时任务
+  private Handler handler = new Handler();
+  private Runnable reconnectRunnable = new Runnable() {
+    @Override
+    public void run() {
+      if (!isReconnectRunning) {
+          isReconnectRunning = true;
+      }
+
+      // 检查连接状态
+      if (!tcpClient.isConnected()) {
+        Log.d("Syslog", "connection broken, call connection method");
+        // 连接断开，进行重新连接
+        reconnectToTCPClient();
+      }
+
+      // 重新调度任务
+      handler.postDelayed(this, 5000);
+    }
+  };
 
 
   @Override
@@ -158,9 +159,11 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
 
           connectToTCPClient(ipAddress,port);
 
-//          if (tcpClient.isConnected() && !isReconnectRunning) {
-//            handler.postDelayed(reconnectRunnable, 5000);
-//          }
+
+          if (!isReconnectRunning) {
+            Log.d("Syslog", "call detection method");
+            handler.postDelayed(reconnectRunnable, 5000);
+          }
 
           // 将获取的IP地址和端口号设置为默认值
           defaultIpAddress = ipAddress;
@@ -216,35 +219,23 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
       public void run() {
         try {
           if (tcpClient != null) {
-            tcpClient.disconnect();
+            tcpClient.connect(targetIpAddress, targetPort,5000);
+          } else {
+            tcpClient = new TCPClient();
+            tcpClient.connect(targetIpAddress, targetPort,5000);
           }
-          // 创建 TCPClient 实例，建立连接
-          tcpClient = new TCPClient(targetIpAddress, targetPort,5000);
-          runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-              Log.d("SysLog", "TCP Connection successful");
-              Toast.makeText(ScanActivity.this, "TCP连接建立成功", Toast.LENGTH_SHORT).show();
-            }
-          });
 
+          if (tcpClient.isConnected()) {
+            runOnUiThread(new Runnable() {
+              @Override
+              public void run() {
+                Log.d("SysLog", "TCP Connection successful");
+                Toast.makeText(ScanActivity.this, "TCP连接建立成功", Toast.LENGTH_SHORT).show();
+              }
+            });
+          }
         } catch (final IOException e) {
           e.printStackTrace();
-          runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-              Log.d("TCP Error", e.toString());
-              AlertDialog.Builder builder = new AlertDialog.Builder(ScanActivity.this);
-              builder.setMessage("服务器TCP连接失败，请检查网络连接")
-                      .setPositiveButton("确定", new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int id) {
-
-                        }
-                      });
-              AlertDialog dialog = builder.create();
-              dialog.show();
-            }
-          });
         }
       }
     }).start();
@@ -326,62 +317,6 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
 
   }
 
-
-//  private void connectToReader() {
-//    for (int i = 0; i < Ports.length; i++) {
-//      conn = RFIDReader.CreateSerialConn(Ports[i] + ":115200", ScanActivity.this);
-//      if (conn){
-//        int finalI = i;
-//        connID = Ports[i]+ ":115200";
-//        runOnUiThread(new Runnable() {
-//          @Override
-//          public void run() {
-//            showToast("串口 " + Ports[finalI]+ ":115200" + "连接成功");
-//          }
-//        });
-//
-//        break;
-//      }
-//    }
-//
-//    if(conn) {
-////          RFIDReader._Config.Stop(connID);
-//      // 连接成功，隐藏进度条，显示正常界面
-//      runOnUiThread(new Runnable() {
-//        @Override
-//        public void run() {
-//          progressBarConnecting.setVisibility(View.GONE);
-//          textConnectingStatus.setVisibility(View.GONE);
-//          spinnerPower.setVisibility(View.VISIBLE);
-//          textViewReadCount.setVisibility(View.VISIBLE);
-//          buttonRefresh.setVisibility(View.VISIBLE);
-//          tableLayout.setVisibility(View.VISIBLE);
-//          editTextIpAddress.setVisibility(View.VISIBLE);
-//          buttonConnect.setVisibility(View.VISIBLE);
-//          text1.setVisibility(View.VISIBLE);
-//        }
-//      });
-//    }
-//    else{
-//      // 连接失败，显示警告对话框并退出应用程序
-//      runOnUiThread(new Runnable() {
-//        @Override
-//        public void run() {
-//          AlertDialog.Builder builder = new AlertDialog.Builder(ScanActivity.this);
-//          builder.setMessage("连接读写器失败，请联系技术支持")
-//                  .setPositiveButton("确定", new DialogInterface.OnClickListener() {
-//                    public void onClick(DialogInterface dialog, int id) {
-//                      // 退出应用程序
-//                      finish();
-//                    }
-//                  });
-//          AlertDialog dialog = builder.create();
-//          dialog.show();
-//        }
-//      });
-//    }
-//  }
-
   public void showConnectingProgress() {
     runOnUiThread(new Runnable() {
       @Override
@@ -431,12 +366,14 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
       // 初始化选择框
       initSpinners(defaultPowerLevel);
       connectToTCPClient(defaultIpAddress, defaultPort);
-
-//      if(tcpClient.isConnected() && !isReconnectRunning) {
-//        // 开始定时重连检测任务
-//        handler.postDelayed(reconnectRunnable, 5000);
-//      }
     }
+
+    if(!isReconnectRunning) {
+      Log.d("Syslog", "call detection method");
+      // 开始定时重连检测任务
+      handler.postDelayed(reconnectRunnable, 5000);
+    }
+
     // 继续初始化界面的代码
     runOnUiThread(new Runnable() {
       @Override
@@ -605,9 +542,7 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
 
     Log.d("Data Callback", "OutPutTags called with EPC: " + tag_model._EPC);
     if(EpcDataMap.get(tag_model._EPC) == null) {
-      // 插入表格中并更新读取数量
-      insertRowInTable(tag_model._EPC);
-      updateReadCount();
+
 
       EpcDataMap.put(tag_model._EPC, 1);
       EpcDataList.add(tag_model._EPC);
@@ -645,6 +580,10 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
       if(max != 0){
         // 发送数据到目标地址和端口号
         tcpClient.sendData(SentData + " " + currentTime);
+        // 插入表格中并更新读取数量
+        updateReadCount();
+        insertRowInTable(SentData);
+
         TurnLightOnAndOff();
       }else {
         tcpClient.sendData("noread " + currentTime);
