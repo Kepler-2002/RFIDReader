@@ -583,6 +583,10 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
         SentData.deleteCharAt(SentData.length() - 1);
         // 发送数据到目标地址和端口号
         tcpClient.sendData(SentData + " " + currentTime);
+
+        //重新开始计数
+        EpcDataMap = new HashMap<>();
+        EpcDataList = new ArrayList<>();
       } else {
         tcpClient.sendData("noread" + " " + currentTime);
         //重新开始计数
