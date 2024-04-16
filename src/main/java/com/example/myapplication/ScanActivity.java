@@ -583,6 +583,7 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
         SentData.deleteCharAt(SentData.length() - 1);
         // 发送数据到目标地址和端口号
         tcpClient.sendData(SentData + " " + currentTime);
+        TurnLightOnAndOff();
 
         //重新开始计数
         EpcDataMap = new HashMap<>();
@@ -593,7 +594,6 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
         EpcDataMap = new HashMap<>();
         EpcDataList = new ArrayList<>();
       }
-      TurnLightOnAndOff();
     }
   }
   @Override
