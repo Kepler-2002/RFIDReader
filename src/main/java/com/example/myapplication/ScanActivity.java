@@ -583,10 +583,10 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
         // 插入表格中并更新读取数量
         updateReadCount();
         insertRowInTable(SentData);
+        TurnLightOnAndOff();
       }else {
         tcpClient.sendData("noread " + currentTime);
       }
-      TurnLightOnAndOff();
       //重新开始计数
       EpcDataMap = new HashMap<>();
       EpcDataList = new ArrayList<>();
