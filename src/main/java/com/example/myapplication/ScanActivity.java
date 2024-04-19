@@ -21,38 +21,27 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import com.rfidread.Enumeration.*;
-import com.rfidread.Interface.IAsynchronousMessage;
-import com.rfidread.Models.GPI_Model;
-import com.rfidread.Models.Tag_Model;
-import com.rfidread.RFIDReader;
+
+import com.rfidread.Enumeration.eGPOState;
+import util.ConnectToReaderTask;
+import util.RFIDReaderHelper;
 import util.TCPClient;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.Date;
 import java.text.SimpleDateFormat;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.LinkedBlockingDeque;
 
-public class ScanActivity extends AppCompatActivity implements IAsynchronousMessage{
+public class ScanActivity extends AppCompatActivity{
+  private RFIDReaderHelper rfidReaderHelper;
+
   private TCPClient tcpClient = new TCPClient();
   private String defaultIpAddress = "192.168.1.106";
   private int defaultPort = 7899; // 默认端口号
 
 
-
-  private String [] Ports = {
-          "/dev/ttyUSB2",
-          "/dev/ttyUSB1",
-          "/dev/ttyUSB0",
-          "/dev/ttyS8",
-          "/dev/ttyS7",
-          "/dev/ttyS6",
-          "/dev/ttyS5",
-          "/dev/ttyS4",
-          "/dev/ttyS3",
-          "/dev/ttyS2",
-          "/dev/ttyS1",
-          "/dev/ttyS0"};
 
   private String connID;
 
@@ -69,8 +58,6 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
 
   private ProgressBar progressBarConnecting;
   private TextView textConnectingStatus;
-
-  private boolean conn;
 
   private boolean isReconnectRunning = false;
 
@@ -98,10 +85,41 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
     }
   };
 
+  BlockingDeque<String> buffer = new LinkedBlockingDeque<>();
+  HashMap<String, Boolean> SentDataMap;
+
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+
+
+    rfidReaderHelper = new RFIDReaderHelper(buffer, SentDataMap, this);
+
+    // 创建一个线程用于从缓冲区的头部获取数据并发送
+    new Thread(() -> {
+      while (true) {
+        try {
+          String data = buffer.takeFirst();
+          int response = tcpClient.sendDataWithReply(data);
+          runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+              showToast("接收到数据: " + response);;
+            }
+          });
+//          if (response != 1) {
+//            System.out.println("Send data failed: " + data);
+//            buffer.putFirst(data); // 发送失败，将数据放回队列的头部
+//          }
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+      }
+    }).start();
+
     Objects.requireNonNull(getSupportActionBar()).hide();
     setContentView(R.layout.activity_scan);
 
@@ -139,9 +157,11 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
     editTextIpAddress.setVisibility(View.INVISIBLE);
     buttonConnect.setVisibility(View.INVISIBLE);
     text1.setVisibility(View.INVISIBLE);
-    // 执行读写器连接操作，你可以根据实际情况替换这里的逻辑
-    ConnectToReaderTask connectTask = new ConnectToReaderTask(this); // 传递活动的上下文
+
+    // 执行读写器连接操作
+    ConnectToReaderTask connectTask = new ConnectToReaderTask(this, rfidReaderHelper); // 传递活动的上下文
     connectTask.execute();
+
 
     // 设置连接按钮的点击事件
     buttonConnect.setOnClickListener(new View.OnClickListener() {
@@ -212,7 +232,6 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
     connectToTCPClient(defaultIpAddress, defaultPort);
   }
 
-
   private void connectToTCPClient(String targetIpAddress, int targetPort) {
     new Thread(new Runnable() {
       @Override
@@ -240,7 +259,6 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
       }
     }).start();
   }
-
 
   // 初始化选择框
   private void initSpinners(int defaultPowerLevel) {
@@ -273,16 +291,8 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
         // 获取用户选择的功率等级（注意，这里的position是从0开始的，所以需要加1）
         int selectedPowerLevel = position + 1;
 
-        // 创建一个HashMap来存储四根天线的功率设置
-        HashMap<Integer, Integer> dicPower = new HashMap<Integer, Integer>();
-        dicPower.put(1, selectedPowerLevel);
-        dicPower.put(2, selectedPowerLevel);
-        dicPower.put(3, selectedPowerLevel);
-        dicPower.put(4, selectedPowerLevel);
-
         // 调用设置功率的函数
-
-        int result = RFIDReader._Config.SetANTPowerParam(connID, dicPower);
+        int result = rfidReaderHelper.setPowerLevel(selectedPowerLevel);
         if (result == 0) {
           runOnUiThread(new Runnable() {
             @Override
@@ -292,7 +302,8 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
               SharedPreferences.Editor editor = sharedPref.edit();
               editor.putInt("defaultPowerLevel", selectedPowerLevel);
               editor.apply(); // 提交更改
-              String currentPowerLevel1 = RFIDReader._Config.GetANTPowerParam2(connID);
+
+              String currentPowerLevel1 = rfidReaderHelper.getPowerLevel(connID);
               Log.d("System.out", "CurrentPowerLevel: " + currentPowerLevel1);
               Toast.makeText(ScanActivity.this, "设置功率成功，当前功率等级：" + currentPowerLevel1, Toast.LENGTH_SHORT).show();
             }
@@ -301,7 +312,7 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
           runOnUiThread(new Runnable() {
             @Override
             public void run() {
-              String currentPowerLevel1 = RFIDReader._Config.GetANTPowerParam2(connID);
+              String currentPowerLevel1 = rfidReaderHelper.getPowerLevel(connID);
               Toast.makeText(ScanActivity.this, "设置功率失败，当前功率等级：" + currentPowerLevel1, Toast.LENGTH_SHORT).show();
             }
           });
@@ -335,28 +346,8 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
     });
   }
 
-  public boolean connectToReader() {
-    for (int i = 0; i < Ports.length; i++) {
-      conn = RFIDReader.CreateSerialConn(Ports[i] + ":115200", this);
-      if (conn) {
-        int finalI = i;
-        connID = Ports[i] + ":115200";
-        runOnUiThread(new Runnable() {
-          @Override
-          public void run() {
-            showToast("串口 " + Ports[finalI] + ":115200" + "连接成功");
-          }
-        });
-
-        return true; // 连接成功，返回 true
-      }
-    }
-
-    return false; // 连接失败，返回 false
-  }
-
   public void initUI() {
-    if (conn){
+    if (rfidReaderHelper.conn){
       // 从SharedPreferences中读取默认IP地址和端口号
       SharedPreferences sharedPref = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
       defaultIpAddress = sharedPref.getString("ipAddress", "192.168.1.106");
@@ -418,20 +409,20 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
     }
 
     // 清空uniqueEpcData
-    EpcDataMap.clear();
-    EpcDataList.clear();
+    rfidReaderHelper.EpcDataMap.clear();
+    rfidReaderHelper.EpcDataList.clear();
 
     textViewReadCount.setText("读取数量: " + "0"); // 更新显示的读取数量
 
   }
 
   // 显示 Toast 消息的方法
-  private void showToast(String message) {
+  public void showToast(String message) {
     Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
   }
 
   // 在表格中插入一行数据
-  private void insertRowInTable(String epcData) {
+  public void insertRowInTable(String epcData) {
     runOnUiThread(new Runnable() {
       @Override
       public void run() {
@@ -454,49 +445,9 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
     });
   }
 
-  private boolean isGPO1On = false; // 用于跟踪指示灯状态
-  private long lastDataTimestamp = 0; // 记录上一次读取到数据的时间戳
-
-  private void TurnLightOnAndOff(){
-
-    // 在OutPutTags方法中
-    runOnUiThread(new Runnable() {
-      @Override
-      public void run() {
-
-        // 获取当前时间戳
-        long currentTimestamp = System.currentTimeMillis();
-
-        // 如果指示灯已经亮，并且时间差小于3秒，继续保持亮的状态
-        if (isGPO1On && (currentTimestamp - lastDataTimestamp < 3000)) {
-          // Do nothing, keep the light on
-        } else {
-          // 否则，将指示灯点亮，然后更新时间戳
-          setGPO1State(eGPOState._High); // 点亮指示灯
-          isGPO1On = true;
-          lastDataTimestamp = currentTimestamp;
-
-          // 在3秒后将指示灯熄灭
-          new Handler().postDelayed(new Runnable() {
-            @Override
-            public void run() {
-              setGPO1State(eGPOState.Low); // 熄灭指示灯
-              isGPO1On = false;
-            }
-          }, 3000);
-        }
-      }
-    });
-  }
-  private void setGPO1State(eGPOState state) {
-    // 使用 SetReaderGPOState 函数设置 eGPO1 的状态
-    HashMap<eGPO, eGPOState> gpoStates = new HashMap<>();
-    gpoStates.put(eGPO._1, state);
-    RFIDReader._Config.SetReaderGPOState(connID, gpoStates);
-  }
 
   // 更新读取数量
-  private void updateReadCount() {
+  public void updateReadCount() {
     runOnUiThread(new Runnable() {
       @Override
       public void run() {
@@ -508,133 +459,10 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
 
   }
 
-
-  @Override
-  public void WriteDebugMsg(String s, String s1) {
-//    Log.d("APILog", "s1: " + s1);
-  }
-
-  @Override
-  public void WriteLog(String s, String s1) {
-
-  }
-
-  @Override
-  public void PortConnecting(String s) {
-
-  }
-
-  @Override
-  public void PortClosing(String s) {
-    Log.d("APILog", "closing connect: " + s);
-  }
-
-  private HashMap<String, Integer> EpcDataMap = new HashMap<>(); // 用于存储EPC数据和对应的次数
-
-  private ArrayList<String> EpcDataList =  new ArrayList<>();
-
-
-
-
-  @Override
-  public void OutPutTags(Tag_Model tag_model) {
-    // 获取标签的EPC数据
-
-    Log.d("Data Callback", "OutPutTags called with EPC: " + tag_model._EPC);
-    if(EpcDataMap.get(tag_model._EPC) == null) {
-
-
-      EpcDataMap.put(tag_model._EPC, 1);
-      EpcDataList.add(tag_model._EPC);
-    }else {
-      EpcDataMap.put(tag_model._EPC, EpcDataMap.get(tag_model._EPC)  + 1);
-    }
-
-  }
-
-  @Override
-  public void OutPutTagsOver(String s) {
-    Log.d("Callback", "Output Over, connID: " + s);
-  }
-
-
-  @Override
-  public void GPIControlMsg(String s, GPI_Model gpi_model) {
-
-//    Log.d("Callback", "ConnID: " + connID + " eGPI: " + eGPI._1 + " GPI Params: " +
-//            RFIDReader._Config.GetReaderGPIParam(connID, eGPI._1));
-    Log.d("Callback", "GPIControlMSg called with GPI Status: " + gpi_model.StartOrStop);
-
-    if(gpi_model.StartOrStop == 1){ // 触发停止
-      int max = 0;
-      String SentData = "";
-      for (String item:EpcDataList) {
-        if (EpcDataMap.get(item) != null && EpcDataMap.get(item) > max){
-          max = EpcDataMap.get(item);
-          SentData = item;
-        }
-      }
-      Date now = new Date();
-      SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss.SSS");
-      String currentTime = formatter.format(now);
-      if(max != 0){
-        // 发送数据到目标地址和端口号
-        tcpClient.sendData(SentData + " " + currentTime);
-        // 插入表格中并更新读取数量
-        updateReadCount();
-        insertRowInTable(SentData);
-        TurnLightOnAndOff();
-      }else {
-        tcpClient.sendData("noread " + currentTime);
-      }
-      //重新开始计数
-      EpcDataMap = new HashMap<>();
-      EpcDataList = new ArrayList<>();
-    }
-  }
-
-  @Override
-  public void OutPutScanData(String s, byte[] bytes) {
-  }
-
   @Override
   protected void onDestroy() {
     super.onDestroy();
-    RFIDReader.CloseAllConnect();
-  }
-
-}
-
-class ConnectToReaderTask extends AsyncTask<Void, Void, Boolean> {
-  private ScanActivity scanActivity;
-
-  public ConnectToReaderTask(ScanActivity activity) {
-    this.scanActivity = activity;
-  }
-
-  @Override
-  protected void onPreExecute() {
-    // 在执行前显示进度条
-    scanActivity.showConnectingProgress();
-  }
-
-  @Override
-  protected Boolean doInBackground(Void... params) {
-    // 在后台执行连接读写器的操作
-    return scanActivity.connectToReader(); // 连接读写器的代码
-  }
-
-  @Override
-  protected void onPostExecute(Boolean connected) {
-    // 在执行完后隐藏进度条
-    scanActivity.hideConnectingProgress();
-
-    if (connected) {
-      // 连接成功，继续初始化界面
-      scanActivity.initUI();
-    } else {
-      // 连接失败，显示警告对话框或其他操作
-      scanActivity.showConnectionErrorDialog();
-    }
+    rfidReaderHelper.closeAllConnect();
   }
 }
+

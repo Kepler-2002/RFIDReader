@@ -30,6 +30,12 @@ public class TCPClient {
     out.println(data);
   }
 
+  public int sendDataWithReply(String data) throws IOException {
+    out.println(data);
+    String response = in.readLine();
+    return Integer.parseInt(response);
+  }
+
   public boolean isConnected() {
     if (socket == null || !socket.isConnected()) {
       System.out.println("socket is null or socket is not connected: "+ socket );
