@@ -32,6 +32,8 @@ import java.io.IOException;
 import java.util.*;
 import java.util.Date;
 import java.text.SimpleDateFormat;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.LinkedBlockingDeque;
 
 public class ScanActivity extends AppCompatActivity implements IAsynchronousMessage{
   private TCPClient tcpClient = new TCPClient();
@@ -98,12 +100,31 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
     }
   };
 
+  // 创建一个阻塞双端队列作为缓冲区
+  BlockingDeque<String> buffer = new LinkedBlockingDeque<>();
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     Objects.requireNonNull(getSupportActionBar()).hide();
     setContentView(R.layout.activity_scan);
+
+    new Thread(() -> {
+      while (true) {
+        try {
+          String data = buffer.takeFirst();
+          int response = tcpClient.sendDataWithReply(data);
+          if (response != 1) {
+            System.out.println("Send data failed: " + data);
+            buffer.putFirst(data); // 发送失败，将数据放回队列的头部
+          }
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+      }
+    }).start();
 
     // 获取ProgressBar引用
     progressBarConnecting = findViewById(R.id.progressBarConnecting);
@@ -533,6 +554,8 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
 
   private ArrayList<String> EpcDataList =  new ArrayList<>();
 
+  private HashMap<String, Boolean> SentDataMap = new HashMap<>();
+
 
 
 
@@ -561,12 +584,12 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
   @Override
   public void GPIControlMsg(String s, GPI_Model gpi_model) {
 
-//    Log.d("Callback", "ConnID: " + connID + " eGPI: " + eGPI._1 + " GPI Params: " +
-//            RFIDReader._Config.GetReaderGPIParam(connID, eGPI._1));
     Log.d("Callback", "GPIControlMSg called with GPI Status: " + gpi_model.StartOrStop);
 
     if(gpi_model.StartOrStop == 1){ // 触发停止
       int max = 0;
+
+      // 确定sentData
       String SentData = "";
       for (String item:EpcDataList) {
         if (EpcDataMap.get(item) != null && EpcDataMap.get(item) > max){
@@ -574,19 +597,29 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
           SentData = item;
         }
       }
-      Date now = new Date();
-      SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss.SSS");
-      String currentTime = formatter.format(now);
-      if(max != 0){
-        // 发送数据到目标地址和端口号
-        tcpClient.sendData(SentData + " " + currentTime);
-        // 插入表格中并更新读取数量
-        updateReadCount();
-        insertRowInTable(SentData);
-        TurnLightOnAndOff();
-      }else {
-        tcpClient.sendData("noread " + currentTime);
+      // 将数据 + 当前时间发送到缓冲区
+      try{
+        Date now = new Date();
+        SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss.SSS");
+        String currentTime = formatter.format(now);
+
+        if(max != 0 && (SentDataMap.get(SentData) == null || Boolean.FALSE.equals(SentDataMap.get(SentData))) ){ // 有数据，且这条数据没进过缓冲区
+          buffer.putLast(SentData + " " + currentTime);
+          // tcpClient.sendData(SentData + " " + currentTime);
+          // 更新全局已发送map
+          SentDataMap.put(SentData, true);
+          // 插入表格中并更新读取数量
+          updateReadCount();
+          insertRowInTable(SentData);
+          TurnLightOnAndOff();
+        }else {
+          // tcpClient.sendData("noread " + currentTime);
+          buffer.putLast("noread " + currentTime);
+        }
+      }catch (InterruptedException e){
+        e.printStackTrace();
       }
+
       //重新开始计数
       EpcDataMap = new HashMap<>();
       EpcDataList = new ArrayList<>();
