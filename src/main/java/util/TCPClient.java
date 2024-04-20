@@ -1,5 +1,7 @@
 package util;
 
+import android.util.Log;
+
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -30,9 +32,15 @@ public class TCPClient {
     out.println(data);
   }
 
-  public int sendDataWithReply(String data) throws IOException {
+  public int sendDataWithReply(String data) throws IOException, InterruptedException {
     out.println(data);
+    out.flush(); // 确保数据被发送出去
     String response = in.readLine();
+    if (response == null) {
+      Log.d("syslog", "连接已关闭，没有收到服务器的响应");
+      return 0;
+    }
+    Log.d("syslog", "收到服务器的响应: " + response);
     return Integer.parseInt(response);
   }
 
@@ -42,12 +50,13 @@ public class TCPClient {
       return false;
     }
 
-    try {
-      socket.sendUrgentData(0);
-      return true;
-    } catch (IOException e) {
-      return false;
-    }
+//    try {
+//      socket.sendUrgentData(0);
+//      return true;
+//    } catch (IOException e) {
+//      return false;
+//    }
+    return true;
   }
 
   public void disconnect() throws IOException {

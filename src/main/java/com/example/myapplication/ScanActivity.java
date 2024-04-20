@@ -112,11 +112,15 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
     new Thread(() -> {
       while (true) {
         try {
+          Log.d("Syslog", "Query buffer: " + buffer.size());
           String data = buffer.takeFirst();
+          Log.d("Syslog", "Take data: " + data);
           int response = tcpClient.sendDataWithReply(data);
           if (response != 1) {
-            System.out.println("Send data failed: " + data);
+            Log.d("Syslog", "发送数据失败: " + data + ", 将数据放回队列的头部");
             buffer.putFirst(data); // 发送失败，将数据放回队列的头部
+          }else {
+            Log.d("Syslog", "接收到rssponse: " + response);
           }
         } catch (InterruptedException e) {
           e.printStackTrace();
