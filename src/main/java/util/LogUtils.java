@@ -39,7 +39,7 @@ public class LogUtils {
     private static String getLogFileName() {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         Date currentDate = new Date();
-        return dateFormat.format(currentDate) + ".log";
+        return dateFormat.format(currentDate) + ".txt";
     }
 
     public static void closeWriter() {
