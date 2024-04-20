@@ -40,6 +40,7 @@ public class LogUtils {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         Date currentDate = new Date();
         return dateFormat.format(currentDate) + ".log";
+        // 1
     }
 
     public static void closeWriter() {
