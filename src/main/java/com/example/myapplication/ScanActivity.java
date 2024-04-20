@@ -122,11 +122,14 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
           }else {
             Log.d("Syslog", "接收到rssponse: " + response);
           }
+
+          Thread.sleep(500);
         } catch (InterruptedException e) {
           e.printStackTrace();
         } catch (IOException e) {
           e.printStackTrace();
         }
+
       }
     }).start();
 

@@ -46,17 +46,16 @@ public class TCPClient {
 
   public boolean isConnected() {
     if (socket == null || !socket.isConnected()) {
-      System.out.println("socket is null or socket is not connected: "+ socket );
+      Log.d("Syslog", "socket is null or socket is not connected: "+ socket );
       return false;
     }
 
-//    try {
-//      socket.sendUrgentData(0);
-//      return true;
-//    } catch (IOException e) {
-//      return false;
-//    }
-    return true;
+    try {
+      socket.sendUrgentData(0);
+      return true;
+    } catch (IOException e) {
+      return false;
+    }
   }
 
   public void disconnect() throws IOException {
