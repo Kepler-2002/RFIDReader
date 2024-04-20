@@ -86,7 +86,6 @@ public class ScanActivity extends AppCompatActivity{
   };
 
   BlockingDeque<String> buffer = new LinkedBlockingDeque<>();
-  HashMap<String, Boolean> SentDataMap;
 
 
   @Override
@@ -94,7 +93,7 @@ public class ScanActivity extends AppCompatActivity{
     super.onCreate(savedInstanceState);
 
 
-    rfidReaderHelper = new RFIDReaderHelper(buffer, SentDataMap, this);
+    rfidReaderHelper = new RFIDReaderHelper(buffer, new HashMap<>(), this);
 
     // 创建一个线程用于从缓冲区的头部获取数据并发送
     new Thread(() -> {
@@ -102,16 +101,14 @@ public class ScanActivity extends AppCompatActivity{
         try {
           String data = buffer.takeFirst();
           int response = tcpClient.sendDataWithReply(data);
-          runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-              showToast("接收到数据: " + response);;
-            }
-          });
-//          if (response != 1) {
-//            System.out.println("Send data failed: " + data);
-//            buffer.putFirst(data); // 发送失败，将数据放回队列的头部
-//          }
+          if (response != 1) {
+            Log.d("Syslog","Send data failed: " + data);
+            buffer.putFirst(data); // 发送失败，将数据放回队列的头部
+          }else {
+            Log.d("Syslog","Send data success");
+          }
+
+          Thread.sleep(200);
         } catch (InterruptedException e) {
           e.printStackTrace();
         } catch (IOException e) {

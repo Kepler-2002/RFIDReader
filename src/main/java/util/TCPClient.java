@@ -1,5 +1,7 @@
 package util;
 
+import android.util.Log;
+
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -32,7 +34,13 @@ public class TCPClient {
 
   public int sendDataWithReply(String data) throws IOException {
     out.println(data);
+    out.flush();
     String response = in.readLine();
+    if (response == null) {
+      Log.d("Syslog", "没有收到服务器的相应");
+      return 0;
+    }
+    Log.d("Syslog", "收到服务器的相应: " + response);
     return Integer.parseInt(response);
   }
 
