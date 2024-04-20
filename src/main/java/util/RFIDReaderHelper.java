@@ -1,6 +1,7 @@
 package util;
 
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.util.Log;
 import com.example.myapplication.ScanActivity;
 import com.rfidread.Enumeration.*;
@@ -29,6 +30,9 @@ public class RFIDReaderHelper implements IAsynchronousMessage{
     private HashMap<String, Boolean> SentDataMap;
     private ScanActivity scanActivity;
 
+    private HandlerThread handlerThread;
+    private Handler handler;
+
 
     // 其他成员变量
     private String [] Ports = {
@@ -49,6 +53,24 @@ public class RFIDReaderHelper implements IAsynchronousMessage{
         this.buffer = buffer;
         this.SentDataMap = SentDataMap;
         this.scanActivity = scanActivity;
+        initHandlerThread();
+    }
+
+    public void initHandlerThread() {
+        handlerThread = new HandlerThread("MyHandlerThread");
+        handlerThread.start();
+        handler = new Handler(handlerThread.getLooper());
+    }
+
+    public void stopHandlerThread() {
+        handlerThread.quitSafely();
+        try {
+            handlerThread.join();
+            handlerThread = null;
+            handler = null;
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     public void connectToReader(String port, int baudRate) {
@@ -97,7 +119,7 @@ public class RFIDReaderHelper implements IAsynchronousMessage{
                     isGPO1On = true;
                     lastDataTimestamp = currentTimestamp;
                     // 在3秒后将指示灯熄灭
-                    new Handler().postDelayed(new Runnable() {
+                    handler.postDelayed(new Runnable() {
                         @Override
                         public void run() {
                             setGPO1State(eGPOState.Low); // 熄灭指示灯
