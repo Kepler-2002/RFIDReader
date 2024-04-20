@@ -153,14 +153,19 @@ public class RFIDReaderHelper implements IAsynchronousMessage{
                 }
             }
 
-            // 将数据 + 当前时间发送到缓冲区
+            // 将数据 + 当前时间发送到缓冲区, 写日志
             try{
                 Date now = new Date();
                 SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss.SSS");
                 String currentTime = formatter.format(now);
 
                 if(max != 0 && (SentDataMap.get(SentData) == null || Boolean.FALSE.equals(SentDataMap.get(SentData))) ){ // 有数据，且这条数据没进过缓冲区
+                    //推进缓冲区
                     buffer.putLast(SentData + " " + currentTime);
+
+                    //写日志
+                    LogUtils.saveLog(SentData + " " + currentTime);
+
                     // 更新全局已发送map
                     SentDataMap.put(SentData, true);
 
@@ -168,8 +173,11 @@ public class RFIDReaderHelper implements IAsynchronousMessage{
                     scanActivity.updateReadCount();
                     scanActivity.insertRowInTable(SentData);
                     TurnLightOnAndOff();
-                }else { // noread
+                }else { //
+                    //推进缓冲区
                     buffer.putLast("noread " + currentTime);
+                    //写日志
+                    LogUtils.saveLog("noread " + currentTime);
                 }
             }catch (InterruptedException e){
                 e.printStackTrace();
