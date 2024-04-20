@@ -26,8 +26,10 @@ import com.rfidread.Interface.IAsynchronousMessage;
 import com.rfidread.Models.GPI_Model;
 import com.rfidread.Models.Tag_Model;
 import com.rfidread.RFIDReader;
+import util.LogUtils;
 import util.TCPClient;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.Date;
@@ -109,6 +111,8 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
     Objects.requireNonNull(getSupportActionBar()).hide();
     setContentView(R.layout.activity_scan);
 
+
+    // 缓冲区线程
     new Thread(() -> {
       while (true) {
         try {
@@ -132,6 +136,8 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
 
       }
     }).start();
+
+
 
     // 获取ProgressBar引用
     progressBarConnecting = findViewById(R.id.progressBarConnecting);
@@ -604,24 +610,32 @@ public class ScanActivity extends AppCompatActivity implements IAsynchronousMess
           SentData = item;
         }
       }
-      // 将数据 + 当前时间发送到缓冲区
+      // 将数据 + 当前时间发送到缓冲区， 存日志
       try{
         Date now = new Date();
         SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss.SSS");
         String currentTime = formatter.format(now);
 
+        // 获取目录
+        String LOG_DIR = getApplicationContext().getFilesDir().getAbsolutePath() + File.separator + "logs";
+
         if(max != 0 && (SentDataMap.get(SentData) == null || Boolean.FALSE.equals(SentDataMap.get(SentData))) ){ // 有数据，且这条数据没进过缓冲区
+          // 把数据推进缓冲区
           buffer.putLast(SentData + " " + currentTime);
-          // tcpClient.sendData(SentData + " " + currentTime);
+          // 写日志
+          LogUtils.saveLog(SentData + " " + currentTime);
           // 更新全局已发送map
           SentDataMap.put(SentData, true);
+
           // 插入表格中并更新读取数量
           updateReadCount();
           insertRowInTable(SentData);
           TurnLightOnAndOff();
         }else {
-          // tcpClient.sendData("noread " + currentTime);
+          // 把数据推进缓冲区
           buffer.putLast("noread " + currentTime);
+          // 写日志
+          LogUtils.saveLog("noread " + currentTime);
         }
       }catch (InterruptedException e){
         e.printStackTrace();
