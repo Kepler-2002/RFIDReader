@@ -1,2 +1,4 @@
-package util;public class LogUtils {
+package util;
+
+public class LogUtils {
 }
