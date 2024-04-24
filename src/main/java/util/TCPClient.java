@@ -33,9 +33,9 @@ public class TCPClient {
   }
 
   public int sendDataWithReply(String data) {
-    out.println(data);
-    out.flush();
     try{
+      out.println(data);
+      out.flush();
       String response = in.readLine();
       if (response == null) {
         Log.d("Syslog", "没有收到服务器的相应");
