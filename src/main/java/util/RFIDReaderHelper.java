@@ -253,6 +253,6 @@ public class RFIDReaderHelper implements IAsynchronousMessage{
             }
         }
 
-        return new ConnectionResult(conn, connID); // 连接失败，返回 false
+        return new ConnectionResult(conn, "Connection Failed"); // 连接失败，返回 false
     }
 }
