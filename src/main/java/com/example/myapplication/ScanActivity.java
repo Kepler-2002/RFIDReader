@@ -102,7 +102,7 @@ public class ScanActivity extends AppCompatActivity{
           String data = buffer.takeFirst();
           int response = tcpClient.sendDataWithReply(data);
           if (response != 1) {
-            Log.d("Syslog","Send data failed: " + data);
+            Log.d("Syslog","Send data failed: " + data + " response: " + response);
             buffer.putFirst(data); // 发送失败，将数据放回队列的头部
           }else {
             Log.d("Syslog","Send data success");
@@ -110,8 +110,6 @@ public class ScanActivity extends AppCompatActivity{
 
           Thread.sleep(200);
         } catch (InterruptedException e) {
-          e.printStackTrace();
-        } catch (IOException e) {
           e.printStackTrace();
         }
       }

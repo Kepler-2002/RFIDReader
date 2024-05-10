@@ -32,16 +32,21 @@ public class TCPClient {
     out.println(data);
   }
 
-  public int sendDataWithReply(String data) throws IOException {
-    out.println(data);
-    out.flush();
-    String response = in.readLine();
-    if (response == null) {
-      Log.d("Syslog", "没有收到服务器的相应");
-      return 0;
+  public int sendDataWithReply(String data) {
+    try{
+      out.println(data);
+      out.flush();
+      String response = in.readLine();
+      if (response == null) {
+        Log.d("Syslog", "没有收到服务器的相应");
+        return 0;
+      }
+      Log.d("Syslog", "收到服务器的相应: " + response);
+      return Integer.parseInt(response);
+    } catch (Exception e) {
+      Log.e("TCPClient error: ", e.toString());
+      return -1;
     }
-    Log.d("Syslog", "收到服务器的相应: " + response);
-    return Integer.parseInt(response);
   }
 
   public boolean isConnected() {
