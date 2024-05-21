@@ -100,7 +100,7 @@ public class ScanActivity extends AppCompatActivity{
       while (true) {
         try {
           String data = buffer.takeFirst();
-          int response = tcpClient.sendDataWithReply(data);
+          int response = tcpClient.sendDataWithReply(data, 5000);
           if (response != 1) {
             Log.d("Syslog","Send data failed: " + data + " response: " + response);
             buffer.putFirst(data); // 发送失败，将数据放回队列的头部

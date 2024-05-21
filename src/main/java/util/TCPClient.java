@@ -5,6 +5,7 @@ import android.util.Log;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 
 public class TCPClient {
   private Socket socket;
@@ -32,17 +33,22 @@ public class TCPClient {
     out.println(data);
   }
 
-  public int sendDataWithReply(String data) {
-    try{
+  public int sendDataWithReply(String data, int timeout) {
+    try {
       out.println(data);
       out.flush();
-      String response = in.readLine();
-      if (response == null) {
-        Log.d("Syslog", "没有收到服务器的相应");
-        return 0;
+
+      long startTime = System.currentTimeMillis();
+      while (!in.ready()) {
+        if (System.currentTimeMillis() - startTime > timeout) {
+          Log.d("Syslog", "读取超时");
+          return -1;
+        }
       }
-      Log.d("Syslog", "收到服务器的相应: " + response);
-      return Integer.parseInt(response);
+
+      char response = (char) in.read();
+      Log.d("Syslog", "收到服务器的响应: " + response);
+      return Integer.parseInt(String.valueOf(response));
     } catch (Exception e) {
       Log.e("TCPClient error: ", e.toString());
       return -1;
