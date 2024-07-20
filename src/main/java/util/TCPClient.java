@@ -63,40 +63,8 @@ public class TCPClient {
 
     try {
       socket.sendUrgentData(0);
-      Log.d("Syslog", "socket.sendUrgentData(0)");
       return true;
     } catch (IOException e) {
-      Log.e("Syslog", "Error: %v", e);
-      return false;
-    }
-  }
-  // isConnectedV2
-  // 通过发送心跳包的方式来确认连接是否正常
-  // 发送格式：ping 接受格式：heartbeat
-  public boolean isConnectedV2(){
-    if (socket == null || !socket.isConnected()) {
-      printLog("socket is null or socket is not connected: "+ socket );
-      return false;
-    }
-    //补全剩下的代码
-    try {
-      // 发送心跳包
-      PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-      BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
-      out.println("ping"); // 发送ping
-
-      // 接收心跳包确认
-      String response = in.readLine();
-      if ("heartbeat".equals(response)) {
-        printLog("Heartbeat received. Connection is active.");
-        return true;
-      } else {
-        printLog("Unexpected response: " + response);
-        return false;
-      }
-    } catch (IOException e) {
-      printLog("Error sending/receiving heartbeat: " + e.getMessage());
       return false;
     }
   }
@@ -107,10 +75,5 @@ public class TCPClient {
       in.close();
       socket.close();
     }
-  }
-
-  public void printLog(String content) {
-    System.out.println(content);
-    Log.d("Syslog", content);
   }
 }
