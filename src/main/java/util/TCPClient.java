@@ -20,12 +20,15 @@ public class TCPClient {
     socket.connect(new InetSocketAddress(ipAddress, port), timeout);
     out = new PrintWriter(socket.getOutputStream(), true);
     in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+    printLog("连接完成");
   }
 
   public void connect(String ipAddress, int port, int timeout) throws IOException {
     if (isConnectedV2()){
+      printLog("存在连接，断开之前的连接");
       disconnect(); // 断开之前的连接
     }
+    printLog("开始连接");
     initialize(ipAddress, port, timeout);
   }
 
@@ -46,9 +49,14 @@ public class TCPClient {
         }
       }
 
-      char response = (char) in.read();
-      Log.d("Syslog", "收到服务器的响应: " + response);
-      return Integer.parseInt(String.valueOf(response));
+      String response = in.readLine().trim(); // 读取并去除空白字符
+      if (Character.isDigit(response.charAt(0))) {
+        Log.d("Syslog", "收到服务器的响应: " + response);
+        return Integer.parseInt(response);
+      } else {
+        Log.d("Syslog", "收到非数字响应: " + response);
+        return -1; // 或者根据实际情况返回其他值
+      }
     } catch (IOException e) {
       Log.e("TCPClient error: ", e.toString());
       return -1;

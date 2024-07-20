@@ -73,12 +73,31 @@ public class ScanActivity extends AppCompatActivity{
           isReconnectRunning = true;
       }
 
-      // 检查连接状态
-      if (!tcpClient.isConnectedV2()) {
-        Log.d("Syslog", "connection broken, call connection method");
-        // 连接断开，进行重新连接
-        reconnectToTCPClient();
-      }
+//      // 检查连接状态
+//      if (!tcpClient.isConnectedV2()) {
+//        Log.d("Syslog", "connection broken, call connection method");
+//        // 连接断开，进行重新连接
+//        reconnectToTCPClient();
+//      }
+
+      // 在后台线程中执行网络操作
+      new Thread(new Runnable() {
+        @Override
+        public void run() {
+          boolean isConnected = tcpClient.isConnectedV2();
+          // 在主线程中更新UI
+          handler.post(new Runnable() {
+            @Override
+            public void run() {
+              if (!isConnected) {
+                Log.d("Syslog", "connection broken, call connection method");
+                // 连接断开，进行重新连接
+                reconnectToTCPClient();
+              }
+            }
+          });
+        }
+      }).start();
 
       // 重新调度任务
       handler.postDelayed(this, 5000);
