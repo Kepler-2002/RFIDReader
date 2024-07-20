@@ -23,7 +23,7 @@ public class TCPClient {
   }
 
   public void connect(String ipAddress, int port, int timeout) throws IOException {
-    if (isConnected()){
+    if (isConnectedV2()){
       disconnect(); // 断开之前的连接
     }
     initialize(ipAddress, port, timeout);
@@ -69,11 +69,52 @@ public class TCPClient {
     }
   }
 
+  // isConnectedV2
+  // 通过发送心跳包的方式来确认连接是否正常
+  // 发送格式：ping 接受格式：heartbeat
+  public boolean isConnectedV2(){
+    if (socket == null || !socket.isConnected()) {
+      printLog("socket is null or socket is not connected: "+ socket);
+      return false;
+    }
+
+    int connectionTimeOut = 5000;
+    try {
+      out.println("ping");
+      out.flush();
+
+      long startTime = System.currentTimeMillis();
+      while (!in.ready()) {
+          if (System.currentTimeMillis() - startTime > connectionTimeOut) {
+          printLog("等待回复超时");
+          return false;
+        }
+      }
+
+      String response = in.readLine();
+      if ("heartbeat".equals(response)) {
+        printLog("Heartbeat received. Connection is active.");
+        return true;
+      } else {
+        printLog("Unexpected response: " + response);
+        return false;
+      }
+    } catch (IOException e) {
+      printLog("Error sending/receiving heartbeat: " + e.getMessage());
+      return false;
+    }
+  }
+
   public void disconnect() throws IOException {
     if (socket != null && !socket.isClosed()) {
       out.close();
       in.close();
       socket.close();
     }
+  }
+
+  private void printLog(String msg) {
+    Log.d("Syslog", msg);
+    System.out.println(msg);
   }
 }

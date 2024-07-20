@@ -74,7 +74,7 @@ public class ScanActivity extends AppCompatActivity{
       }
 
       // 检查连接状态
-      if (!tcpClient.isConnected()) {
+      if (!tcpClient.isConnectedV2()) {
         Log.d("Syslog", "connection broken, call connection method");
         // 连接断开，进行重新连接
         reconnectToTCPClient();
@@ -239,7 +239,7 @@ public class ScanActivity extends AppCompatActivity{
             tcpClient.connect(targetIpAddress, targetPort,5000);
           }
 
-          if (tcpClient.isConnected()) {
+          if (tcpClient.isConnectedV2()) {
             runOnUiThread(new Runnable() {
               @Override
               public void run() {
