@@ -49,7 +49,7 @@ public class TCPClient {
       char response = (char) in.read();
       Log.d("Syslog", "收到服务器的响应: " + response);
       return Integer.parseInt(String.valueOf(response));
-    } catch (Exception e) {
+    } catch (IOException e) {
       Log.e("TCPClient error: ", e.toString());
       return -1;
     }
